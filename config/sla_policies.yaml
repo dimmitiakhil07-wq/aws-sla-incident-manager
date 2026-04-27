@@ -1,0 +1,63 @@
+clients:
+  7eleven:
+    sla_uptime_pct: 99.9
+    slo_response_ms: 500
+    incident_response_minutes:
+      sev1: 15
+      sev2: 30
+      sev3: 120
+    contacts:
+      primary: ops-7eleven@yourco.com
+      escalation: vp-ops@yourco.com
+
+  bp:
+    sla_uptime_pct: 99.5
+    slo_response_ms: 800
+    incident_response_minutes:
+      sev1: 15
+      sev2: 60
+      sev3: 240
+    contacts:
+      primary: ops-bp@yourco.com
+      escalation: vp-ops@yourco.com
+
+  mgm:
+    sla_uptime_pct: 99.9
+    slo_response_ms: 300
+    incident_response_minutes:
+      sev1: 10
+      sev2: 30
+      sev3: 120
+    contacts:
+      primary: ops-mgm@yourco.com
+      escalation: vp-ops@yourco.com
+
+  spwy:
+    sla_uptime_pct: 99.5
+    slo_response_ms: 600
+    incident_response_minutes:
+      sev1: 15
+      sev2: 60
+      sev3: 240
+    contacts:
+      primary: ops-spwy@yourco.com
+      escalation: vp-ops@yourco.com
+
+escalation:
+  l1_to_l2_minutes: 15
+  l2_to_l3_minutes: 30
+
+alerts:
+  slack:
+    enabled: false
+    webhook_url: https://hooks.slack.com/services/CHANGE/ME/NOW
+    channel: "#ops-incidents"
+  email:
+    enabled: false
+    smtp_host: smtp.gmail.com
+    smtp_port: 587
+    smtp_user: alerts@yourco.com
+    smtp_password: your-app-password
+    from_address: alerts@yourco.com
+    to_addresses:
+      - ops-team@yourco.com

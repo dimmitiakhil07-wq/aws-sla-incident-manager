@@ -1,0 +1,62 @@
+aws:
+  region: us-east-1
+  profile: default
+
+ec2_instances:
+  - id: i-0abc1234def56780
+    name: web-server-prod-01
+    client: 7eleven
+    environment: production
+
+  - id: i-0abc1234def56781
+    name: app-server-prod-01
+    client: 7eleven
+    environment: production
+
+  - id: i-0xyz9876abc12340
+    name: web-server-bp-01
+    client: bp
+    environment: production
+
+  - id: i-0xyz9876abc12341
+    name: app-server-mgm-01
+    client: mgm
+    environment: production
+
+  - id: i-0xyz9876abc12342
+    name: app-server-spwy-01
+    client: spwy
+    environment: production
+
+rds_instances:
+  - id: prod-mysql-7eleven
+    name: prod-mysql-7eleven
+    client: 7eleven
+    environment: production
+
+  - id: prod-pg-bp-01
+    name: prod-pg-bp-01
+    client: bp
+    environment: production
+
+  - id: prod-pg-mgm-01
+    name: prod-pg-mgm-01
+    client: mgm
+    environment: production
+
+alb_names:
+  - name: prod-alb-7eleven
+    client: 7eleven
+
+  - name: prod-alb-bp
+    client: bp
+
+  - name: prod-alb-mgm
+    client: mgm
+
+  - name: prod-alb-spwy
+    client: spwy
+
+collection:
+  lookback_minutes: 10        # how far back to pull metrics on each run
+  period_seconds: 300         # CloudWatch metric aggregation period (5 min)

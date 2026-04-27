@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS SLA Incident Manager</title>
+<meta http-equiv="refresh" content="60">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e0e0e0; padding: 24px; }
+  h1 { color: #58a6ff; font-size: 1.4rem; font-weight: 600; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 0.8rem; margin-bottom: 24px; }
+  .section-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
+                   color: #888; margin: 28px 0 12px; border-bottom: 1px solid #21262d; padding-bottom: 6px; }
+  .stat-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+  .stat { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 14px 20px; min-width: 120px; }
+  .stat-val { font-size: 1.8rem; font-weight: 700; }
+  .stat-lbl { font-size: 0.68rem; color: #666; margin-top: 2px; }
+  .incidents-grid { display: flex; flex-direction: column; gap: 10px; }
+  .inc-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 14px 18px;
+              display: flex; align-items: center; gap: 18px; }
+  .inc-card.SEV1 { border-left: 4px solid #f85149; }
+  .inc-card.SEV2 { border-left: 4px solid #d29922; }
+  .inc-card.SEV3 { border-left: 4px solid #388bfd; }
+  .sev-badge { font-size: 0.65rem; font-weight: 800; padding: 3px 10px; border-radius: 10px; min-width: 52px; text-align: center; }
+  .sev-badge.SEV1 { background: #5d1f1a; color: #f85149; }
+  .sev-badge.SEV2 { background: #3d2d0b; color: #d29922; }
+  .sev-badge.SEV3 { background: #0f2942; color: #388bfd; }
+  .inc-title { font-weight: 600; font-size: 0.9rem; flex: 1; }
+  .inc-meta { font-size: 0.75rem; color: #888; margin-top: 3px; }
+  .age-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; background: #21262d; color: #ccc; }
+  .client-badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 4px;
+                  background: #1c2a1e; color: #3fb950; font-weight: 700; }
+  .status-badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 4px; }
+  .status-badge.open { background: #5d1f1a; color: #f85149; }
+  .status-badge.acknowledged { background: #3d2d0b; color: #d29922; }
+  .sla-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .sla-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 18px; }
+  .sla-card.breach { border-color: #f85149; }
+  .sla-client { font-weight: 700; font-size: 1rem; color: #3fb950; margin-bottom: 10px; }
+  .sla-row { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 5px; }
+  .sla-label { color: #888; }
+  .sla-val { font-weight: 600; }
+  .breach-txt { color: #f85149; }
+  .ok-txt { color: #3fb950; }
+  .gauge-wrap { background: #0d1117; border-radius: 4px; height: 6px; margin: 8px 0; overflow: hidden; }
+  .gauge { height: 6px; border-radius: 4px; }
+  .gauge.ok   { background: #3fb950; }
+  .gauge.warn { background: #d29922; }
+  .gauge.bad  { background: #f85149; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  th { text-align: left; color: #666; font-weight: 500; padding: 7px 10px;
+       border-bottom: 1px solid #21262d; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 8px 10px; border-bottom: 1px solid #161b22; }
+  tr:hover td { background: #161b22; }
+  .no-data { color: #555; font-style: italic; padding: 20px 0; text-align: center; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<h1>AWS SLA Incident Manager</h1>
+<p class="subtitle">Last refreshed: {{ now }} &nbsp;·&nbsp; Auto-refresh: 60s</p>
+
+{% set open_count = active_incidents | selectattr('status', 'eq', 'open') | list | length %}
+{% set ack_count  = active_incidents | selectattr('status', 'eq', 'acknowledged') | list | length %}
+{% set sev1_count = active_incidents | selectattr('severity', 'eq', 'SEV1') | list | length %}
+{% set sla_breach = sla_summary | rejectattr('sla_met') | list | length %}
+
+<div class="stat-row">
+  <div class="stat">
+    <div class="stat-val" style="color:{% if sev1_count > 0 %}#f85149{% else %}#3fb950{% endif %}">{{ sev1_count }}</div>
+    <div class="stat-lbl">Active SEV1</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" style="color:#d29922">{{ open_count }}</div>
+    <div class="stat-lbl">Open Incidents</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" style="color:#888">{{ ack_count }}</div>
+    <div class="stat-lbl">Acknowledged</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" style="color:{% if sla_breach > 0 %}#f85149{% else %}#3fb950{% endif %}">{{ sla_breach }}</div>
+    <div class="stat-lbl">SLA Breaches</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" style="color:#58a6ff">{{ sla_summary | length }}</div>
+    <div class="stat-lbl">Clients Monitored</div>
+  </div>
+</div>
+
+<!-- ACTIVE INCIDENTS -->
+<div class="section-title">Active Incidents</div>
+{% if active_incidents %}
+<div class="incidents-grid">
+{% for inc in active_incidents %}
+  <div class="inc-card {{ inc.severity }}">
+    <span class="sev-badge {{ inc.severity }}">{{ inc.severity }}</span>
+    <div style="flex:1">
+      <div class="inc-title">{{ inc.title }}</div>
+      <div class="inc-meta">{{ inc.incident_id }} &nbsp;·&nbsp; Owner: {{ inc.owner or 'unassigned' }}</div>
+    </div>
+    <span class="client-badge">{{ inc.client | upper }}</span>
+    <span class="status-badge {{ inc.status }}">{{ inc.status }}</span>
+    <span class="age-badge">{{ inc.age_minutes }}m</span>
+  </div>
+{% endfor %}
+</div>
+{% else %}
+<p class="no-data">No active incidents. All systems operational.</p>
+{% endif %}
+
+<!-- SLA COMPLIANCE (ROLLING 30 DAYS) -->
+<div class="section-title">SLA Compliance — Rolling 30 Days</div>
+{% if sla_summary %}
+<div class="sla-grid">
+{% for s in sla_summary %}
+  {% set gauge_pct = [(s.uptime_pct - (s.target_pct - 1)), 0] | max * 100 %}
+  {% set cls = 'ok' if s.sla_met else 'bad' %}
+  <div class="sla-card {% if not s.sla_met %}breach{% endif %}">
+    <div class="sla-client">{{ s.client | upper }}</div>
+    <div class="sla-row">
+      <span class="sla-label">Uptime</span>
+      <span class="sla-val {{ 'ok-txt' if s.sla_met else 'breach-txt' }}">{{ "%.4f" | format(s.uptime_pct) }}%</span>
+    </div>
+    <div class="gauge-wrap"><div class="gauge {{ cls }}" style="width:{{ [s.uptime_pct, 100] | min }}%"></div></div>
+    <div class="sla-row">
+      <span class="sla-label">SLA Target</span>
+      <span class="sla-val">{{ s.target_pct }}%</span>
+    </div>
+    <div class="sla-row">
+      <span class="sla-label">Downtime</span>
+      <span class="sla-val">{{ s.downtime_minutes }}m</span>
+    </div>
+    {% if s.p95_ms > 0 %}
+    <div class="sla-row" style="margin-top:6px">
+      <span class="sla-label">p95 Response</span>
+      <span class="sla-val {{ 'ok-txt' if s.slo_met else 'breach-txt' }}">{{ s.p95_ms }}ms</span>
+    </div>
+    <div class="sla-row">
+      <span class="sla-label">SLO Target</span>
+      <span class="sla-val">{{ s.slo_target_ms }}ms</span>
+    </div>
+    {% endif %}
+  </div>
+{% endfor %}
+</div>
+{% else %}
+<p class="no-data">No SLA data. Run <code>python src/cloudwatch_collector.py --once</code> to populate metrics.</p>
+{% endif %}
+
+<!-- RECENT INCIDENTS -->
+<div class="section-title">Recent Incidents (Last 10)</div>
+{% if recent_incidents %}
+<table>
+  <thead>
+    <tr><th>ID</th><th>Severity</th><th>Client</th><th>Title</th><th>Status</th><th>MTTR</th><th>Opened</th></tr>
+  </thead>
+  <tbody>
+  {% for inc in recent_incidents %}
+    <tr>
+      <td>{{ inc.incident_id }}</td>
+      <td><span class="sev-badge {{ inc.severity }}">{{ inc.severity }}</span></td>
+      <td><span class="client-badge">{{ inc.client | upper }}</span></td>
+      <td>{{ inc.title[:50] }}{% if inc.title | length > 50 %}…{% endif %}</td>
+      <td><span class="status-badge {{ inc.status }}">{{ inc.status }}</span></td>
+      <td>{{ inc.mttr_minutes ~ 'm' if inc.mttr_minutes else '—' }}</td>
+      <td>{{ inc.created_at[:16].replace('T',' ') }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="no-data">No incidents recorded yet.</p>
+{% endif %}
+
+</body>
+</html>
